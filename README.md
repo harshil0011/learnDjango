@@ -273,3 +273,109 @@ Now, run Migrate again to create those model tables in your database.
 ```bash
 python manage.py migrate
 ```
+Migrations are very powerful and let you change your models over time, as you develop your project, without the need to delete your database or tables and make new ones - it specializes in upgrading your database live, without losing data. We’ll cover them in more depth in a later part of the tutorial, but for now, remember the three-step guide to making model changes:
+
+Change your models (in models.py).
+Run python manage.py makemigrations to create migrations for those changes
+Run python manage.py migrate to apply those changes to the database.
+
+**Playing With API**
+Now, let’s hop into the interactive Python shell and play around with the free API Django gives you. To invoke the Python shell, use this command:
+```bash
+python manage.py shell
+ ```
+```python
+>>> from polls.models import Choice, Question  # Import the model classes we just wrote.
+
+# No questions are in the system yet.
+>>> Question.objects.all()
+<QuerySet []>
+
+# Create a new Question.
+# Support for time zones is enabled in the default settings file, so
+# Django expects a datetime with tzinfo for pub_date. Use timezone.now()
+# instead of datetime.datetime.now() and it will do the right thing.
+>>> from django.utils import timezone
+>>> q = Question(question_text="What's new?", pub_date=timezone.now())
+
+# Save the object into the database. You have to call save() explicitly.
+>>> q.save()
+
+# Now it has an ID.
+>>> q.id
+1
+
+# Access model field values via Python attributes.
+>>> q.question_text
+"What's new?"
+>>> q.pub_date
+datetime.datetime(2024, 10, 12, 9, 28, 49, 545427, tzinfo=datetime.timezone.utc)
+
+# Change values by changing the attributes, then calling save().
+>>> q.question_text = "What's up?"
+>>> q.save()
+
+# objects.all() displays all the questions in the database.
+>>> Question.objects.all()
+<QuerySet [<Question: Question object (1)>]>
+
+```
+ Wait a minute. <Question: Question object (1)> isn’t a helpful representation of this object. Let’s fix that by editing the Question model (in the polls/models.py file) and adding a __str__() method to both Question and Choice:
+ ```python
+from django.db import models
+
+
+class Question(models.Model):
+    # ...
+    def __str__(self):
+        return self.question_text
+
+
+class Choice(models.Model):
+    # ...
+    def __str__(self):
+        return self.choice_text
+```
+It’s important to add __str__() methods to your models, not only for your own convenience when dealing with the interactive prompt, but also because objects’ representations are used throughout Django’s automatically-generated admin.
+
+Let's also add a custom method to this model
+```python
+import datetime
+
+from django.db import models
+from django.utils import timezone
+
+
+class Question(models.Model):
+    # ...
+    def was_published_recently(self):
+        return self.pub_date >= timezone.now() - datetime.timedelta(days=1)
+```
+This code is a part of a Django model class for handling a `Question` in a database. Here's a breakdown of what's happening:
+
+### Key Components:
+
+1. **Imports**:
+   - `datetime`: This module is used to handle dates and times in Python.
+   - `models` from `django.db`: This is the base class for defining models in Django.
+   - `timezone` from `django.utils`: This utility is used for timezone-aware date and time handling in Django.
+
+2. **`Question` Model**:
+   - This is a Django model representing a "Question" in your database. It will likely have fields such as `pub_date` to store the date it was published, though this field isn't shown in the code snippet.
+   - Django models typically map to database tables, and each field in the model corresponds to a column in the table.
+
+3. **Method `was_published_recently`**:
+   - This method checks if the `Question` was published in the last 24 hours.
+   - **`timezone.now()`** gets the current date and time (aware of timezones).
+   - **`datetime.timedelta(days=1)`** represents a time difference of 1 day (24 hours).
+   - The method compares the question's publication date (`self.pub_date`) to see if it is greater than or equal to the time 24 hours ago. If the publication date is within the last 24 hours, this method will return `True`.
+
+### Example Scenario:
+- If the `Question` object was published at 3 PM yesterday and you check `was_published_recently()` at 2 PM today, the method will return `True`, because it's within 24 hours.
+- If it was published two days ago, it will return `False`.
+
+This method is useful for displaying questions published recently on your website, or for filtering queries based on publication time.
+
+Would you like to add more functionality to this method, or perhaps write tests for it?
+
+
